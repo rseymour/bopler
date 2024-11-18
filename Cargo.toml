@@ -1,0 +1,8 @@
+[package]
+name = "bopler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+midir = "0.10.0"
+midly = "0.5.3"
