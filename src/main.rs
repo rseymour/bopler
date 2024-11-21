@@ -33,25 +33,25 @@ fn main() -> Result<(), Box<dyn Error>> {
     let port = &out_ports[port_number];
     println!("\nOpening connection");
     let mut conn_out = midi_out.connect(port, "midir-test")?;
+    let controller = midly::num::u7::new(00);
+    let value = midly::num::u7::new(0x51);
+    let control_change = midly::MidiMessage::Controller { controller, value };
+    let low_range = 1..=8;
+    for channel in low_range {
+        // Create the Control Change message
+        let cc_message = LiveEvent::Midi {
+            channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
+            message: control_change,
+        };
 
-    let control_change = midly::MidiMessage::Controller {
-        controller: midly::num::u7::new(00),
-        value: midly::num::u7::new(0x51),
-    };
-    // Create the Control Change message
-    let cc_message = LiveEvent::Midi {
-        channel: midly::num::u4::from(0), // MIDI channel 1 (zero-based)
-        message: control_change,
-    };
+        // Convert to raw MIDI bytes
+        let mut buffer = Vec::new();
+        cc_message.write(&mut buffer)?;
 
-    // Convert to raw MIDI bytes
-    let mut buffer = Vec::new();
-    cc_message.write(&mut buffer)?;
-
-    // Send the message
-    conn_out.send(&buffer)?;
-    println!("Sent Control Change message: Channel 1, Controller 0, Value 51");
-
+        // Send the message
+        conn_out.send(&buffer)?;
+        println!("Sent Control Change message: Channel {channel}, Controller {controller}, Value {value}");
+    }
     // Keep the connection open briefly
     std::thread::sleep(std::time::Duration::from_millis(100));
 
