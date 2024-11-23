@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 midir = "0.10.0"
 midly = "0.5.3"
+regex = "1.11.1"
