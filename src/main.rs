@@ -76,18 +76,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("\nOpening connection");
     let mut conn_out = midi_out.connect(port, "midir-test")?;
     // cc 00 00 cc 32 81 pc 30
-    let controller = midly::num::u7::new(00);
-    let value = midly::num::u7::new(00);
-    let control_change1 = midly::MidiMessage::Controller { controller, value };
-    let controller = midly::num::u7::new(32);
-    let value = midly::num::u7::new(81);
-    let control_change2 = midly::MidiMessage::Controller { controller, value };
     // this should be able to change banks
-    let program = midly::num::u7::new(0x07);
-    let program_message = midly::MidiMessage::ProgramChange { program };
     let patches = extract_data_from_file("patches.txt")?;
     dbg!(&patches.get(3));
     for channel in mpe::low_range {
+        let program = midly::num::u7::new(0x07);
+        let program_message = midly::MidiMessage::ProgramChange { program };
+        // other option is controller 0 value 81 and just send 1 event
+        // but I think high res is needed
+        let controller = midly::num::u7::new(00);
+        let value = midly::num::u7::new(00);
+        let control_change1 = midly::MidiMessage::Controller { controller, value };
+        let controller = midly::num::u7::new(32);
+        let value = midly::num::u7::new(81);
+        let control_change2 = midly::MidiMessage::Controller { controller, value };
         // Create the Control Change message
         let cc_message1 = LiveEvent::Midi {
             channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
