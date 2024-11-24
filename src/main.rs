@@ -79,43 +79,119 @@ fn main() -> Result<(), Box<dyn Error>> {
     // this should be able to change banks
     let patches = extract_data_from_file("patches.txt")?;
     dbg!(&patches.get(3));
-    for channel in mpe::low_range {
-        let program = midly::num::u7::new(0x07);
-        let program_message = midly::MidiMessage::ProgramChange { program };
-        // other option is controller 0 value 81 and just send 1 event
-        // but I think high res is needed
-        let controller = midly::num::u7::new(00);
-        let value = midly::num::u7::new(00);
-        let control_change1 = midly::MidiMessage::Controller { controller, value };
-        let controller = midly::num::u7::new(32);
-        let value = midly::num::u7::new(81);
-        let control_change2 = midly::MidiMessage::Controller { controller, value };
-        // Create the Control Change message
-        let cc_message1 = LiveEvent::Midi {
-            channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
-            message: control_change1,
-        };
-        let cc_message2 = LiveEvent::Midi {
-            channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
-            message: control_change2,
-        };
-        let pc_message = LiveEvent::Midi {
-            channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
-            message: program_message,
-        };
+    let program = midly::num::u7::new(63);
+    let value_lsb = midly::num::u7::new(00);
+    let value_msb = midly::num::u7::new(81);
+    for channel in mpe::full_range {
+        /*
+        # bend up / down?
+        sendmidi dev $k ch $i cc 31H 12
+        sendmidi dev $k ch $i cc 32H 12
 
-        let mut buffer = Vec::new();
-        // Convert to raw MIDI bytes
-        cc_message1.write(&mut buffer)?;
-        cc_message2.write(&mut buffer)?;
-        pc_message.write(&mut buffer)?;
-
-        // Send the message
+        # bend range
+        sendmidi dev $k ch $i rpn 0000 0600h
+        # need to set Analog Feel !!!
+         */
+        let buffer = choose_patch(program, value_lsb, value_msb, channel)?;
         conn_out.send(&buffer)?;
-        println!("Sent Control Change message: Channel {channel}, Controller {controller}, Value {value}, PC {program}");
+
+        let buffer = bend_params(channel)?;
+        conn_out.send(&buffer)?;
     }
     // Keep the connection open briefly
     std::thread::sleep(std::time::Duration::from_millis(100));
 
     Ok(())
+}
+
+fn bend_params(channel: u8) -> Result<Vec<u8>, Box<dyn Error>> {
+    let bend_change1 = midly::MidiMessage::Controller {
+        controller: 0x31.into(),
+        value: 12.into(),
+    };
+    let cc_message1 = LiveEvent::Midi {
+        channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
+        message: bend_change1,
+    };
+    let bend_change2 = midly::MidiMessage::Controller {
+        controller: 0x32.into(),
+        value: 12.into(),
+    };
+    let cc_message2 = LiveEvent::Midi {
+        channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
+        message: bend_change2,
+    };
+    let bend_range = vec![
+        midly::MidiMessage::Controller {
+            controller: 0x65.into(),
+            value: 0x00.into(),
+        },
+        midly::MidiMessage::Controller {
+            controller: 0x64.into(),
+            value: 0x00.into(),
+        },
+        midly::MidiMessage::Controller {
+            controller: 0x26.into(),
+            value: 0x00.into(),
+        },
+        midly::MidiMessage::Controller {
+            controller: 0x06.into(),
+            value: 0x0C.into(),
+        },
+        midly::MidiMessage::Controller {
+            controller: 0x64.into(),
+            value: 0x7f.into(),
+        },
+        midly::MidiMessage::Controller {
+            controller: 0x65.into(),
+            value: 0x7f.into(),
+        },
+    ];
+    let mut buffer = Vec::new();
+    cc_message1.write(&mut buffer)?;
+    cc_message2.write(&mut buffer)?;
+    for b in bend_range.into_iter() {
+        let msg = LiveEvent::Midi {
+            channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
+            message: b,
+        };
+        msg.write(&mut buffer)?;
+    }
+    Ok(buffer)
+}
+fn choose_patch(
+    program: midly::num::u7,
+    value_lsb: midly::num::u7,
+    value_msb: midly::num::u7,
+    channel: u8,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    let program_message = midly::MidiMessage::ProgramChange { program };
+    let controller = midly::num::u7::new(00);
+    let control_change1 = midly::MidiMessage::Controller {
+        controller,
+        value: value_lsb,
+    };
+    let controller = midly::num::u7::new(32);
+    let control_change2 = midly::MidiMessage::Controller {
+        controller,
+        value: value_msb,
+    };
+    let cc_message1 = LiveEvent::Midi {
+        channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
+        message: control_change1,
+    };
+    let cc_message2 = LiveEvent::Midi {
+        channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
+        message: control_change2,
+    };
+    let pc_message = LiveEvent::Midi {
+        channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
+        message: program_message,
+    };
+    let mut buffer = Vec::new();
+    cc_message1.write(&mut buffer)?;
+    cc_message2.write(&mut buffer)?;
+    pc_message.write(&mut buffer)?;
+    //println!("Sent Control Change message: Channel {channel}, Controller {controller}, Value {value}, PC {program}");
+    Ok(buffer)
 }
