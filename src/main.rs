@@ -1,5 +1,6 @@
 use midir::{MidiOutput, MidiOutputPort};
 use midly::live::LiveEvent;
+use rand::seq::SliceRandom;
 use regex::Regex;
 use std::error::Error;
 use std::fs::File;
@@ -75,24 +76,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     let port = &out_ports[port_number];
     println!("\nOpening connection");
     let mut conn_out = midi_out.connect(port, "midir-test")?;
-    // cc 00 00 cc 32 81 pc 30
-    // this should be able to change banks
     let patches = extract_data_from_file("patches.txt")?;
-    dbg!(&patches.get(3));
-    let program = midly::num::u7::new(63);
-    let value_lsb = midly::num::u7::new(00);
-    let value_msb = midly::num::u7::new(81);
-    for channel in mpe::full_range {
-        /*
-        # bend up / down?
-        sendmidi dev $k ch $i cc 31H 12
-        sendmidi dev $k ch $i cc 32H 12
 
-        # bend range
-        sendmidi dev $k ch $i rpn 0000 0600h
-        # need to set Analog Feel !!!
-         */
-        let buffer = choose_patch(program, value_lsb, value_msb, channel)?;
+    let rp = patches
+        .choose(&mut rand::thread_rng())
+        .expect("the world works");
+    dbg!(&rp);
+    for channel in mpe::full_range {
+        //let buffer = choose_patch(rp.pc.into(),  rp.msb.into(),rp.lsb.into(), channel)?;
+        //pc seems off by one
+        // and some don't load? 213 84 3 (card)
+        // see google sheets for real:
+        // https://docs.google.com/spreadsheets/d/1F2HihOomA8cItVsjR-6l4r20PYHsWU9bU6SEac03thA/edit?gid=989494382#gid=989494382
+        let buffer = choose_patch(66.into(), 81.into(), 4.into(), channel)?;
         conn_out.send(&buffer)?;
 
         let buffer = bend_params(channel)?;
@@ -161,20 +157,20 @@ fn bend_params(channel: u8) -> Result<Vec<u8>, Box<dyn Error>> {
 }
 fn choose_patch(
     program: midly::num::u7,
-    value_lsb: midly::num::u7,
     value_msb: midly::num::u7,
+    value_lsb: midly::num::u7,
     channel: u8,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
     let program_message = midly::MidiMessage::ProgramChange { program };
     let controller = midly::num::u7::new(00);
     let control_change1 = midly::MidiMessage::Controller {
         controller,
-        value: value_lsb,
+        value: value_msb,
     };
     let controller = midly::num::u7::new(32);
     let control_change2 = midly::MidiMessage::Controller {
         controller,
-        value: value_msb,
+        value: value_lsb,
     };
     let cc_message1 = LiveEvent::Midi {
         channel: midly::num::u4::from(channel), // MIDI channel 1 (zero-based)
