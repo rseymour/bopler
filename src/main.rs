@@ -23,23 +23,25 @@ struct Patch {
     msb: u8,
     lsb: u8,
     name: String,
+    category: String,
 }
 
 fn extract_data_from_file(file_path: &str) -> Result<Vec<Patch>, Box<dyn Error>> {
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
-    let pattern = r"(\d+):(\d+):(\d+) (.+)";
+    let pattern = r"(\d+)\t(\d+)\t(\d+)\t(.+?)\t(.+)";
     let re = Regex::new(pattern)?;
     let mut results = Vec::new();
 
     for line in reader.lines() {
         let line = line?;
-        for (_, [pc, msb, lsb, name]) in re.captures_iter(&line).map(|c| c.extract()) {
+        for (_, [pc, msb, lsb, name, category]) in re.captures_iter(&line).map(|c| c.extract()) {
             results.push(Patch {
                 pc: pc.parse()?,
                 msb: msb.parse()?,
                 lsb: lsb.parse()?,
                 name: name.to_string(),
+                category: category.to_string(),
             });
         }
     }
@@ -76,7 +78,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let port = &out_ports[port_number];
     println!("\nOpening connection");
     let mut conn_out = midi_out.connect(port, "midir-test")?;
-    let patches = extract_data_from_file("patches.txt")?;
+    let patches = extract_data_from_file("all_patches.tsv")?;
 
     let rp = patches
         .choose(&mut rand::thread_rng())
