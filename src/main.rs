@@ -4,7 +4,6 @@ use rand::seq::SliceRandom;
 use std::error::Error;
 use std::io::{stdin, stdout, Write};
 
-mod boplib;
 // http://www.gmarts.org/data/jv-midiman.htm
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a new MIDI output connection
@@ -36,14 +35,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let port = &out_ports[port_number];
     println!("\nOpening connection");
     let mut conn_out = midi_out.connect(port, "midir-test")?;
-    let patches = boplib::extract_data_from_file("all_patches.tsv")?;
+    let patches = bopler::extract_data_from_file("all_patches.tsv")?;
 
     let rp = patches
         .choose(&mut rand::thread_rng())
         .expect("the world works");
     dbg!(&rp);
-    let mpe_range = boplib::mpe::FULL_RANGE;
-    boplib::set_patch(rp, mpe_range, &mut conn_out)?;
+    let mpe_range = bopler::mpe::FULL_RANGE;
+    bopler::set_patch(rp, mpe_range, &mut conn_out)?;
     // Keep the connection open briefly
     std::thread::sleep(std::time::Duration::from_millis(100));
 

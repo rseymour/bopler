@@ -128,11 +128,11 @@ pub mod mpe {
 // MSB/LSB must be between 0...127
 #[derive(Debug)]
 pub struct Patch {
-    pc: u8,
-    msb: u8,
-    lsb: u8,
-    name: String,
-    category: String,
+    pub pc: u8,
+    pub msb: u8,
+    pub lsb: u8,
+    pub name: String,
+    pub category: String,
 }
 
 pub fn extract_data_from_file(file_path: &str) -> Result<Vec<Patch>, Box<dyn Error>> {
