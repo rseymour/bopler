@@ -135,6 +135,26 @@ pub struct Patch {
     pub category: String,
 }
 
+pub fn extract_data_from_string(string: &str) -> Result<Vec<Patch>, Box<dyn Error>> {
+    let pattern = r"(\d+)\t(\d+)\t(\d+)\t(.+?)\t(.+)";
+    let re = Regex::new(pattern)?;
+    let mut results = Vec::new();
+
+    for line in string.lines() {
+        for (_, [pc, msb, lsb, name, category]) in re.captures_iter(&line).map(|c| c.extract()) {
+            results.push(Patch {
+                pc: pc.parse()?,
+                msb: msb.parse()?,
+                lsb: lsb.parse()?,
+                name: name.to_string(),
+                category: category.to_string(),
+            });
+        }
+    }
+
+    Ok(results)
+}
+
 pub fn extract_data_from_file(file_path: &str) -> Result<Vec<Patch>, Box<dyn Error>> {
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);
