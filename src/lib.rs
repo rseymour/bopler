@@ -16,7 +16,8 @@ pub fn set_patch(
         // and some don't load? 213 84 3 (card)
         // see google sheets for real:
         // https://docs.google.com/spreadsheets/d/1F2HihOomA8cItVsjR-6l4r20PYHsWU9bU6SEac03thA/edit?gid=989494382#gid=989494382
-        let buffer = choose_patch(rp.pc.into(), rp.msb.into(), rp.lsb.into(), channel)?;
+        // magic minus 1
+        let buffer = choose_patch((rp.pc - 1).into(), rp.msb.into(), rp.lsb.into(), channel)?;
         conn_out.send(&buffer)?;
 
         let buffer = bend_params(channel)?;
