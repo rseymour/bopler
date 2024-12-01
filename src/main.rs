@@ -1,13 +1,12 @@
-use midir::{MidiOutput, MidiOutputPort};
-use midly::live::LiveEvent;
+use midir::MidiOutput;
 use rand::seq::SliceRandom;
 use std::error::Error;
 use std::io::{stdin, stdout, Write};
 
-// http://www.gmarts.org/data/jv-midiman.htm
+/// Simple test program to test the patch setting
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a new MIDI output connection
-    let midi_out = MidiOutput::new("My MIDI Output")?;
+    let midi_out = MidiOutput::new("Bopler MIDI Output")?;
 
     // Get available ports
     let out_ports = midi_out.ports();
