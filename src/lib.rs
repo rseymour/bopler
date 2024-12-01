@@ -127,7 +127,7 @@ pub mod mpe {
 // Three numbers, delimited by ':', which represent PC:MSB:LSB. You can put 'NULL' to not set the MSB/LSB.
 // PC must be between 1...128
 // MSB/LSB must be between 0...127
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Patch {
     pub pc: u8,
     pub msb: u8,
